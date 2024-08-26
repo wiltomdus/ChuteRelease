@@ -1,0 +1,136 @@
+(kicad_sch
+	(version 20231120)
+	(generator "eeschema")
+	(generator_version "8.0")
+	(uuid "9d05c756-443f-4d4d-9854-905483bdebb5")
+	(paper "A4")
+	(lib_symbols)
+	(sheet
+		(at 17.78 85.09)
+		(size 127 46.99)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "5f724fc2-c244-4ef5-a561-90477baa6d29")
+		(property "Sheetname" "SENSORS"
+			(at 17.78 84.3784 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "sensors.kicad_sch"
+			(at 17.78 132.6646 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Field2" ""
+			(at 17.78 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(instances
+			(project "chute_release"
+				(path "/9d05c756-443f-4d4d-9854-905483bdebb5"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 167.64 17.78)
+		(size 104.14 58.42)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "afe4b9a7-4888-43df-a8b4-becbfded7c1d")
+		(property "Sheetname" "POWER"
+			(at 167.64 17.0684 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "power.kicad_sch"
+			(at 167.64 76.7846 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "chute_release"
+				(path "/9d05c756-443f-4d4d-9854-905483bdebb5"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 17.78 16.51)
+		(size 127 62.23)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "bdb2c442-b20f-44c0-bb5b-b75bb6e98de3")
+		(property "Sheetname" "MCU"
+			(at 17.78 15.7984 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "mcu.kicad_sch"
+			(at 17.78 79.3246 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "chute_release"
+				(path "/9d05c756-443f-4d4d-9854-905483bdebb5"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+)
