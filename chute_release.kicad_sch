@@ -53,6 +53,44 @@
 		)
 	)
 	(sheet
+		(at 165.1 87.63)
+		(size 106.68 44.45)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "81f39544-edb3-4c73-aab1-56b23621352d")
+		(property "Sheetname" "INTERFACE"
+			(at 165.1 86.9184 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "interface.kicad_sch"
+			(at 165.1 132.6646 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "chute_release"
+				(path "/9d05c756-443f-4d4d-9854-905483bdebb5"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet
 		(at 167.64 17.78)
 		(size 104.14 58.42)
 		(fields_autoplaced yes)
