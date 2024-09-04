@@ -27,3 +27,10 @@ fp-info-cache
 # Exported BOM files
 *.xml
 *.csv
+
+.fseventsd/
+*.metadata*
+*.Trash*
+Boot_out.txt
+System Volume Information/
+data/**
