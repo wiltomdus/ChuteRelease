@@ -3,10 +3,10 @@ import board
 import digitalio
 import storage
 
-switch = digitalio.DigitalInOut(board.GP7)
-switch.direction = digitalio.Direction.INPUT
-switch.pull = digitalio.Pull.UP
+VBUS_DETECT = digitalio.DigitalInOut(board.VBUS_DETECT)
+VBUS_DETECT.direction = digitalio.Direction.INPUT
+VBUS_DETECT_value = VBUS_DETECT.value
 
-# If the switch pin is connected to ground (pressed) USB will have write access - This will be dev mode
-# Otherwise CircuitPython will have write access - this will be production mode
-storage.remount("/", not switch.value)
+# If USB is connected, CircuitPython can write to the drive (DEV MODE)
+# If USB is not connected, CircuitPython cannot write to the drive (PRODUCTION MODE)
+storage.remount("/", VBUS_DETECT_value)
