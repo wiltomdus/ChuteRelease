@@ -1127,7 +1127,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0d7b7484-f41e-4a30-8fe0-df5578940b5e")
-		(property "Reference" "R6"
+		(property "Reference" "R19"
 			(at 33.02 46.9899 0)
 			(effects
 				(font
@@ -1145,7 +1145,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 28.702 48.26 90)
 			(effects
 				(font
@@ -1181,7 +1181,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "R6")
+					(reference "R19")
 					(unit 1)
 				)
 			)
@@ -1196,7 +1196,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "18c0e8b8-e147-4a28-b676-80fedc0d9018")
-		(property "Reference" "#PWR031"
+		(property "Reference" "#PWR052"
 			(at 109.22 72.39 0)
 			(effects
 				(font
@@ -1246,7 +1246,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "#PWR031")
+					(reference "#PWR052")
 					(unit 1)
 				)
 			)
@@ -1261,7 +1261,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "19c1077f-7314-4cbf-9951-de3ad4d0fe89")
-		(property "Reference" "C19"
+		(property "Reference" "C21"
 			(at 112.141 57.2516 0)
 			(effects
 				(font
@@ -1315,7 +1315,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "C19")
+					(reference "C21")
 					(unit 1)
 				)
 			)
@@ -1330,7 +1330,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "26864223-538e-4be6-aac9-ee689515369b")
-		(property "Reference" "C18"
+		(property "Reference" "C22"
 			(at 127.762 44.958 0)
 			(effects
 				(font
@@ -1384,7 +1384,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "C18")
+					(reference "C22")
 					(unit 1)
 				)
 			)
@@ -1400,7 +1400,7 @@
 		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "3a59448d-1c9d-4ae8-8b8b-ae3d09ef4061")
-		(property "Reference" "R8"
+		(property "Reference" "R21"
 			(at 57.15 60.9599 0)
 			(effects
 				(font
@@ -1418,7 +1418,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 52.832 62.23 90)
 			(effects
 				(font
@@ -1454,7 +1454,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "R8")
+					(reference "R21")
 					(unit 1)
 				)
 			)
@@ -1469,7 +1469,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "56b2c2b6-2041-47e5-bc7f-35a135e4d1f1")
-		(property "Reference" "#PWR029"
+		(property "Reference" "#PWR054"
 			(at 111.76 52.07 0)
 			(effects
 				(font
@@ -1519,7 +1519,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "#PWR029")
+					(reference "#PWR054")
 					(unit 1)
 				)
 			)
@@ -1535,7 +1535,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5fdc2f86-8967-4b4e-8ed3-d925b52a36e0")
-		(property "Reference" "R7"
+		(property "Reference" "R20"
 			(at 52.07 43.1799 0)
 			(effects
 				(font
@@ -1553,7 +1553,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 47.752 44.45 90)
 			(effects
 				(font
@@ -1589,7 +1589,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "R7")
+					(reference "R20")
 					(unit 1)
 				)
 			)
@@ -1605,7 +1605,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "82d9a593-6f3a-4148-adad-e4413cd35533")
-		(property "Reference" "U4"
+		(property "Reference" "U5"
 			(at 81.28 33.02 0)
 			(effects
 				(font
@@ -1736,7 +1736,7 @@
 		(instances
 			(project ""
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "U4")
+					(reference "U5")
 					(unit 1)
 				)
 			)
@@ -1751,7 +1751,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "89e3f76b-9346-46e9-838f-86930de5d397")
-		(property "Reference" "#PWR032"
+		(property "Reference" "#PWR050"
 			(at 54.61 74.93 0)
 			(effects
 				(font
@@ -1801,7 +1801,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "#PWR032")
+					(reference "#PWR050")
 					(unit 1)
 				)
 			)
@@ -1816,7 +1816,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "9dc27ecd-fb51-4f9b-848a-d83664967e40")
-		(property "Reference" "#PWR030"
+		(property "Reference" "#PWR055"
 			(at 124.46 62.23 0)
 			(effects
 				(font
@@ -1866,7 +1866,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "#PWR030")
+					(reference "#PWR055")
 					(unit 1)
 				)
 			)
@@ -1881,7 +1881,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "a6d327f3-7b23-4b5c-87b8-750c64aced2b")
-		(property "Reference" "#PWR026"
+		(property "Reference" "#PWR051"
 			(at 99.06 73.66 0)
 			(effects
 				(font
@@ -1931,7 +1931,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "#PWR026")
+					(reference "#PWR051")
 					(unit 1)
 				)
 			)
@@ -1946,7 +1946,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "b58073ff-65c2-4328-ad9d-666f30e090cc")
-		(property "Reference" "#PWR028"
+		(property "Reference" "#PWR049"
 			(at 49.53 40.64 0)
 			(effects
 				(font
@@ -1996,7 +1996,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "#PWR028")
+					(reference "#PWR049")
 					(unit 1)
 				)
 			)
@@ -2011,7 +2011,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "eba34064-9027-44ce-b4ee-ca51e977c0bd")
-		(property "Reference" "#PWR027"
+		(property "Reference" "#PWR048"
 			(at 30.48 44.45 0)
 			(effects
 				(font
@@ -2061,7 +2061,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "#PWR027")
+					(reference "#PWR048")
 					(unit 1)
 				)
 			)
@@ -2076,7 +2076,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "fc67191c-2344-4f83-a9a3-5de13ee0cf86")
-		(property "Reference" "#PWR025"
+		(property "Reference" "#PWR053"
 			(at 111.76 41.91 0)
 			(effects
 				(font
@@ -2126,7 +2126,7 @@
 		(instances
 			(project "chute_release"
 				(path "/9d05c756-443f-4d4d-9854-905483bdebb5/5f724fc2-c244-4ef5-a561-90477baa6d29"
-					(reference "#PWR025")
+					(reference "#PWR053")
 					(unit 1)
 				)
 			)
