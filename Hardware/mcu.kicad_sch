@@ -2950,6 +2950,16 @@
 	)
 	(wire
 		(pts
+			(xy 212.09 124.46) (xy 227.33 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1b6be049-6e29-4b4b-aad6-2ce58eba5f3a")
+	)
+	(wire
+		(pts
 			(xy 160.02 35.56) (xy 160.02 40.64)
 		)
 		(stroke
@@ -3037,16 +3047,6 @@
 			(type default)
 		)
 		(uuid "2c9e3a3d-2250-4e31-97fd-8c0425d95a56")
-	)
-	(wire
-		(pts
-			(xy 212.09 124.46) (xy 227.33 124.46)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2e34b873-848c-4426-9051-0df76c0566e7")
 	)
 	(wire
 		(pts
@@ -4603,6 +4603,17 @@
 		)
 		(uuid "b01d321d-8e08-460d-b67e-c49f53d9036c")
 	)
+	(label "GPIO21"
+		(at 227.33 124.46 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "c2f633af-f13d-44e1-8ee6-dc920e118d74")
+	)
 	(label "GPIO20"
 		(at 227.33 121.92 180)
 		(fields_autoplaced yes)
@@ -4924,7 +4935,7 @@
 	)
 	(global_label "VBUS_DETECT"
 		(shape input)
-		(at 227.33 124.46 0)
+		(at 227.33 119.38 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -4934,7 +4945,7 @@
 		)
 		(uuid "e7995499-6175-4e63-8aee-e6c953a00ff8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 242.9546 124.46 0)
+			(at 242.9546 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
