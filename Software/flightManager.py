@@ -54,7 +54,7 @@ class FlightManager:
             self.is_development = True
 
         if self.is_development:
-            from Software.mock_barometer import MockBarometer
+            from mock_barometer import MockBarometer
 
             self.barometer = MockBarometer()
             print("Using mock barometer for development")
