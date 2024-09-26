@@ -3,6 +3,8 @@ import asyncio
 import os
 import pwmio
 import board
+import math
+import digitalio
 
 from kalman_filter import KalmanFilter
 from adafruit_motor import servo
@@ -17,21 +19,22 @@ FLIGHT_STAGES = (
 )
 
 RELEASE_ALTITUDE = {
-    "100": 30.48,
-    "200": 60.96,
-    "300": 91.44,
-    "400": 121.92,
-    "500": 152.4,
-    "600": 182.88,
-    "700": 213.36,
-    "800": 243.84,
-    "900": 274.32,
-    "1000": 304.8,
-    "1100": 335.28,
-    "1200": 365.76,
-    "1300": 396.24,
-    "1400": 426.72,
-    "1500": 457.2,
+    "0": 30.48,  # 100 feet
+    "1": 60.96,  # 200 feet
+    "2": 91.44,  # 300 feet
+    "3": 121.92,  # 400 feet
+    "4": 152.4,  # 500 feet
+    "5": 182.88,  # 600 feet
+    "6": 213.36,  # 700 feet
+    "7": 243.84,  # 800 feet
+    "8": 274.32,  # 900 feet
+    "9": 304.8,  # 1000 feet
+    "10": 335.28,  # 1100 feet
+    "11": 365.76,  # 1200 feet
+    "12": 396.24,  # 1300 feet
+    "13": 426.72,  # 1400 feet
+    "14": 457.2,  # 1500 feet
+    "15": 487.68,  # 1600 feet
 }
 
 LAUNCH_DETECT_ALTITUDE = (
@@ -103,15 +106,29 @@ class FlightManager:
             estimated_measurement_variance=10.0,
         )
 
-        pwm = pwmio.PWMOut(board.GP15, frequency=50)
-        servo_range = 120
-        self.my_servo = servo.Servo(
-            pwm,
-            min_pulse=900,  # Minimum pulse width in microseconds
-            max_pulse=2100,  # Maximum pulse width in microseconds
-            actuation_range=servo_range,  # Set to 120 degrees
-        )
-        self.my_servo.angle = 0
+        try:
+            pwm = pwmio.PWMOut(board.GP15, frequency=50)
+            servo_range = 120
+            self.my_servo = servo.Servo(
+                pwm,
+                min_pulse=900,  # Minimum pulse width in microseconds
+                max_pulse=2100,  # Maximum pulse width in microseconds
+                actuation_range=servo_range,  # Set to 120 degrees
+            )
+            self.my_servo.angle = 0
+        except Exception as e:
+            print(f"Error initializing servo: {e}")
+
+        # Rotary switch pins
+        self.pin0 = digitalio.DigitalInOut(board.GP21)
+        self.pin1 = digitalio.DigitalInOut(board.GP20)
+        self.pin2 = digitalio.DigitalInOut(board.GP19)
+        self.pin3 = digitalio.DigitalInOut(board.GP18)
+
+        # Set all pins to input mode with pull-up resistors
+        for pin in [self.pin0, self.pin1, self.pin2, self.pin3]:
+            pin.direction = digitalio.Direction.INPUT
+            pin.pull = digitalio.Pull.UP
 
     async def fly(self) -> None:
         """State machine to determine the current flight stage"""
@@ -128,7 +145,7 @@ class FlightManager:
             try:
                 with open(self.flight_data_filename, "w") as file:
                     file.write(
-                        "Timestamp,Altitude,Pressure,Temperature,Vertical Velocity, Vertical Acceleration,FlightStage\n"
+                        "Timestamp,Altitude AGL,Altitude Smoothed,Pressure,Temperature,Vertical Velocity, Vertical Acceleration,FlightStage, Delta Time\n"
                     )
                 print(
                     f"Opened flight data file: {self.flight_data_filename} for logging"
@@ -138,6 +155,11 @@ class FlightManager:
                 print("Unable to open flight data file:", err)
                 print("Switching to development mode...")
                 self.is_development = True
+        else:
+            print("Running in development mode, skipping file logging")
+            print(
+                "Timestamp,Altitude AGL,Altitude Smoothed,Pressure,Temperature,Vertical Velocity, Vertical Acceleration,FlightStage, Delta Time"
+            )
 
         previous_altitude = self.ground_altitude
         previous_time = time.monotonic()
@@ -162,8 +184,15 @@ class FlightManager:
             # Update Kalman filter for altitude
             smoothed_altitude = self.kalman_filter_altitude.update(altitude_agl)
 
+            self.speed_of_sound = self.calculate_speed_of_sound(temperature)
+
             # Calculate and filter velocity
             self.calculate_velocity(previous_altitude, smoothed_altitude, delta_time)
+
+            # Check for supersonic velocity (greater than 343 m/s)
+            # if self.vertical_velocity > self.speed_of_sound:
+            #     print("Supersonic velocity detected, skipping flight stage checks.")
+            #     continue
 
             # Calculate and filter acceleration based on the new velocity
             self.calculate_acceleration(
@@ -185,11 +214,13 @@ class FlightManager:
                 if file_size <= 12000000 and self.is_flight_started:
                     self.log_flight_data(
                         altitude_agl,
+                        smoothed_altitude,
                         pressure,
                         temperature,
                         self.vertical_velocity,
                         self.vertical_acceleration,
                         self.flight_stage,
+                        delta_time,
                     )
             else:
                 print(
@@ -201,12 +232,20 @@ class FlightManager:
 
             # Determine the current flight stage
             if self.flight_stage == FLIGHT_STAGES[0]:  # LAUNCHPAD
+                if not self.is_flight_started:
+                    self.selected_release_altitude = self.read_rotary_switch()
+                    print(
+                        f"Current release altitude: {self.selected_release_altitude} meters"
+                    )
+
                 if smoothed_altitude > LAUNCH_DETECT_ALTITUDE:  # Launch detected
                     self.flight_stage = FLIGHT_STAGES[
                         1
                     ]  # Set the flight stage to ASCENT
                     self.is_flight_started = True
-                    continue
+                    print(
+                        f"Release altitude locked: {self.selected_release_altitude} meters"
+                    )
                 await asyncio.sleep(0)
 
             elif self.flight_stage == FLIGHT_STAGES[1]:  # ASCENT
@@ -219,7 +258,6 @@ class FlightManager:
                     self.release_enabled = True
                     # Sleep for 1 second to prevent false detection of descent due to separation
                     # await asyncio.sleep(1)
-                    continue
                 await asyncio.sleep(0)
 
             elif self.flight_stage == FLIGHT_STAGES[2]:  # APOGEE
@@ -229,17 +267,18 @@ class FlightManager:
                     self.flight_stage = FLIGHT_STAGES[
                         3
                     ]  # Set the flight stage to DESCENT
-                    continue
                 await asyncio.sleep(0)
 
             elif self.flight_stage == FLIGHT_STAGES[3]:  # DESCENT
-                if -0.25 <= self.vertical_velocity <= 0.25:
+                if (
+                    -0.25 <= self.vertical_velocity <= 0.25
+                    and smoothed_altitude <= LAUNCH_DETECT_ALTITUDE
+                ):
                     self.flight_stage = FLIGHT_STAGES[
                         4
                     ]  # Set the flight stage to LANDED
-                    continue
                 elif self.release_enabled:
-                    if smoothed_altitude <= RELEASE_ALTITUDE["300"]:
+                    if smoothed_altitude <= self.selected_release_altitude:
                         self.trigger_chute_release()
                         self.release_enabled = False
                 await asyncio.sleep(0)
@@ -260,18 +299,20 @@ class FlightManager:
 
     def log_flight_data(
         self,
-        altitude,
+        altitude_agl,
+        smoothed_altitude,
         pressure,
         temperature,
         vertical_velocity,
         vertical_acceleration,
         flight_stage,
+        delta_time,
     ):
         try:
             # Log the flight data to a file
             with open(self.flight_data_filename, "a") as file:
                 file.write(
-                    f"{time.monotonic()},{altitude:.2f},{pressure:.2f},{temperature:.2f},{vertical_velocity:.2f},{vertical_acceleration:.2f},{flight_stage}\n"
+                    f"{time.monotonic()},{altitude_agl:.2f},{smoothed_altitude:.2f},{pressure:.2f},{temperature:.2f},{vertical_velocity:.2f},{vertical_acceleration:.2f},{flight_stage},{delta_time:.2f}\n"
                 )
         except OSError:  # Typically when the filesystem isn't writable...
             print("Filesystem not writable, skipping flight data logging")
@@ -320,3 +361,42 @@ class FlightManager:
     def update_max_altitude(self, altitude):
         """Update the maximum altitude reached during the flight"""
         self.max_altitude = max(self.max_altitude, altitude)
+
+    def calculate_speed_of_sound(self, temperature_celsius: float) -> float:
+        """
+        Calculates the speed of sound in air based on the temperature in Celsius.
+
+        Parameters:
+        temperature_celsius (float): The temperature in Celsius.
+
+        Returns:
+        float: Speed of sound in meters per second.
+        """
+        # Constants
+        gamma = 1.4  # Adiabatic index for air
+        R = 287.05  # Specific gas constant for dry air (J/(kg·K))
+
+        # Convert Celsius to Kelvin
+        temperature_kelvin = temperature_celsius + 273.15
+
+        # Speed of sound formula
+        speed = math.sqrt(gamma * R * temperature_kelvin)
+
+        return speed
+
+    def read_rotary_switch(self):
+        """Reads the rotary switch and returns the corresponding altitude"""
+        # Read the binary value from the rotary switch
+        switch_value = (
+            (self.pin3.value << 3)
+            | (self.pin2.value << 2)
+            | (self.pin1.value << 1)
+            | self.pin0.value
+        )
+        # Invert the switch value to correct the offset
+        switch_value = switch_value ^ 0xF
+        # Map the switch value to a release altitude
+        release_altitude = RELEASE_ALTITUDE.get(
+            str(switch_value), RELEASE_ALTITUDE["0"]
+        )
+        return release_altitude
