@@ -1,13 +1,18 @@
-import time
 import asyncio
-import os
-import pwmio
-import board
 import math
-import digitalio
+import os
+import time
 
-from kalman_filter import KalmanFilter
+import board
+import digitalio
+import pwmio
 from adafruit_motor import servo
+
+from mock_barometer import MockBarometer
+from barometer import Barometer
+
+# from kalman_filter import KalmanFilter
+from extended_kalman_filter import ExtendedKalmanFilter
 
 FLIGHT_STAGES = ("LAUNCHPAD", "ASCENT", "APOGEE", "DESCENT", "LANDED")
 RELEASE_ALTITUDE = {
@@ -53,13 +58,9 @@ class FlightManager:
     def setup_barometer(self):
         """Set up the barometer depending on development or production mode."""
         if self.is_development:
-            from mock_barometer import MockBarometer
-
             self.barometer = MockBarometer()
             print("Using mock barometer for development")
         else:
-            from barometer import Barometer
-
             self.barometer = Barometer()
             print("Using real barometer for production")
 
@@ -97,8 +98,6 @@ class FlightManager:
         self.max_altitude = 0.0
 
         self.initial_pressure = self.barometer.get_sensor_data()[0]
-        self.previous_velocity = 0.0
-        self.previous_acceleration = 0.0
 
         self.release_enabled = False
         self.is_flight_started = False
@@ -107,18 +106,29 @@ class FlightManager:
         self.vertical_acceleration = 0.0
         self.speed_of_sound = 343.0  # Speed of sound in air at 20°C (m/s)
 
-        # Kalman filters for altitude, velocity, and acceleration
-        self.kalman_filter_altitude = KalmanFilter(50, 0.5, 0.5)
-        self.kalman_filter_velocity = KalmanFilter(0.1, 1.0, 1.0)
-        self.kalman_filter_acceleration = KalmanFilter(0.01, 10.0, 10.0)
+        # Initial state [altitude, velocity, acceleration]
+        initial_state = [0, 0, 0]  # Assume the rocket starts at 0 meters, stationary
+
+        # Process covariance matrix (Q): Represents uncertainty in the model
+        process_covariance = [
+            [1, 0, 0],  # Process noise for position
+            [0, 1, 0],  # Process noise for velocity
+            [0, 0, 1],  # Process noise for acceleration
+        ]
+
+        # Measurement variances for altitude
+        measurement_variances = [0.5]
+
+        # Initialize the filter
+        self.kalman_filter = ExtendedKalmanFilter(
+            initial_state, process_covariance, measurement_variances
+        )
 
     async def main(self) -> None:
         self.ground_altitude = await self.collect_ground_altitude()
         self.open_flight_data_file()
 
-        previous_altitude = self.ground_altitude
         previous_time = time.monotonic()
-        previous_velocity = 0.0
         previous_smoothed_altitude = self.ground_altitude
         smoothed_altitude = self.ground_altitude
 
@@ -128,15 +138,19 @@ class FlightManager:
             altitude_agl = altitude - self.ground_altitude
             delta_time = current_time - previous_time
 
-            smoothed_altitude = self.kalman_filter_altitude.update(altitude_agl)
-            self.speed_of_sound = self.calculate_speed_of_sound(temperature)
+            # Update Kalman filter with new altitude measurement
+            self.kalman_filter.predict(delta_time)
+            self.kalman_filter.update([altitude_agl], delta_time)
 
-            self.calculate_velocity(previous_altitude, smoothed_altitude, delta_time)
-            # TODO: Implement mach lockout
-            self.calculate_acceleration(
-                previous_velocity, self.vertical_velocity, delta_time
+            smoothed_altitude, self.vertical_velocity, self.vertical_acceleration = (
+                self.kalman_filter.get_state()
             )
 
+            self.speed_of_sound = self.calculate_speed_of_sound(temperature)
+
+            # TODO: Implement mach lockout
+
+            # End the loop if the flight has landed
             if self.update_flight_stage(smoothed_altitude, previous_smoothed_altitude):
                 break
 
@@ -166,11 +180,7 @@ class FlightManager:
 
             self.update_max_altitude(smoothed_altitude)
 
-            previous_altitude, previous_time, previous_velocity = (
-                smoothed_altitude,
-                current_time,
-                self.vertical_velocity,
-            )
+            previous_time = current_time
 
             await asyncio.sleep(0.1)  # TODO Remove when ready to run on hardware
 
@@ -270,44 +280,6 @@ class FlightManager:
     def update_max_altitude(self, altitude):
         """Update the maximum altitude reached during the flight"""
         self.max_altitude = max(self.max_altitude, altitude)
-
-    def calculate_velocity(self, previous_altitude, current_altitude, delta_time):
-        """
-        Calculate the vertical velocity based on altitude readings and apply Kalman filtering.
-
-        :param previous_altitude: Altitude at the previous time step (in meters)
-        :param current_altitude: Altitude at the current time step (in meters)
-        :param delta_time: Time difference between the two altitude readings (in seconds)
-        :return: None
-        """
-        if delta_time == 0:
-            return  # Avoid division by zero if time difference is zero
-
-        # Calculate the raw vertical velocity (change in altitude over time)
-        raw_velocity = (current_altitude - previous_altitude) / delta_time
-
-        # Update Kalman filter for velocity
-        self.vertical_velocity = self.kalman_filter_velocity.update(raw_velocity)
-
-    def calculate_acceleration(self, previous_velocity, current_velocity, delta_time):
-        """
-        Calculate the vertical acceleration based on velocity readings and apply filtering.
-
-        :param previous_velocity: Velocity at the previous time step (in meters/second)
-        :param current_velocity: Velocity at the current time step (in meters/second)
-        :param delta_time: Time difference between the two velocity readings (in seconds)
-        :return: None
-        """
-        if delta_time == 0:
-            return  # Avoid division by zero if time difference is zero
-
-        # Calculate the raw acceleration as the change in velocity over time
-        raw_acceleration = (current_velocity - previous_velocity) / delta_time
-
-        # Update Kalman filter for acceleration
-        self.vertical_acceleration = self.kalman_filter_acceleration.update(
-            raw_acceleration
-        )
 
     def log_flight_data(
         self,
