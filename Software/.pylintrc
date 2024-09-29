@@ -1,0 +1,31 @@
+[MASTER]
+# Add any directories to ignore here.
+ignore=venv,tests
+
+# Specify a configuration file to load additional plugins if necessary.
+# load-plugins=pylint_django, pylint_flask
+
+[MESSAGES CONTROL]
+# Disable certain warnings or error messages by adding their code.
+disable=C0114,C0115,C0116,E0401, W0201
+
+[FORMAT]
+# Set the max line length (similar to Flake8's max-line-length setting).
+max-line-length=120
+
+[DESIGN]
+# Maximum number of arguments a function can accept.
+max-args=5
+
+# Maximum number of attributes a class can have.
+max-attributes=7
+
+# Maximum number of branches in a function.
+max-branches=12
+
+[BASIC]
+
+
+[LOGGING]
+# Specify the logging module used in your project (optional).
+logging-modules=logging
