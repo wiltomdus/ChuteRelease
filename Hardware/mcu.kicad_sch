@@ -4492,6 +4492,17 @@
 		)
 		(uuid "76778cb6-e1e0-435d-83d3-bfe08639f0de")
 	)
+	(label "GPIO14"
+		(at 227.33 106.68 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "7adfe34e-bd49-48fd-9789-fd67a4644b04")
+	)
 	(label "GPIO7"
 		(at 227.33 88.9 180)
 		(fields_autoplaced yes)
@@ -4524,17 +4535,6 @@
 			(justify right bottom)
 		)
 		(uuid "898492ad-d186-4967-bd66-d981800655dd")
-	)
-	(label "GPIO14"
-		(at 227.33 106.68 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "8c9e08a4-d120-4fed-a85f-33d4f099e489")
 	)
 	(label "QSPI_SS"
 		(at 134.62 72.39 0)
@@ -4634,17 +4634,6 @@
 			(justify right bottom)
 		)
 		(uuid "c4741081-5377-401f-bc6f-21ed90468f8e")
-	)
-	(label "GPIO11"
-		(at 227.33 99.06 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "c5b1a7cc-0e6c-4a1c-92c1-5beb23154813")
 	)
 	(label "QSPI_SCLK"
 		(at 134.62 87.63 0)
@@ -4978,6 +4967,28 @@
 		(uuid "ea215057-da3a-43bb-be82-1f902d2e5f0f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 239.8098 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "SDO"
+		(shape input)
+		(at 227.33 99.06 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f8d54e1e-e0d7-426d-a874-dd78bdc3ac50")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 234.1252 99.06 0)
 			(effects
 				(font
 					(size 1.27 1.27)
