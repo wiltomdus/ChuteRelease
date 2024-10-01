@@ -66,5 +66,24 @@ The firmware is written in CircuitPython and manages the barometer readings, par
 2. The parachute will be released automatically when the rocket reaches the selected altitude during descent.
 3. Flight data will be logged to a CSV file for further analysis.
 
-## License
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+## License Information
+
+### Hardware License (PCB Designs)
+The hardware designs in this repository are licensed under the **CERN Open Hardware License - Weakly Reciprocal (CERN OHL-W)**. This license allows anyone to use, copy, modify, and distribute the hardware design files, provided that any modified versions are also made available under the same license.
+
+- **CERN OHL-W Overview:**
+  - Allows you to use and modify the hardware.
+  - Modifications must be shared if distributed.
+  - This license is designed for hardware projects and ensures freedom to use and improve designs while encouraging collaboration.
+
+You can read the full license terms in the [LICENSE-hardware](./LICENSE-hardware) file.
+
+### Software License (Software)
+The software (firmware) in this repository is licensed under the **GNU Affero General Public License v3 (AGPL v3)**. This license ensures that any modifications to the software, including modifications made for network services, must also be open source and licensed under the AGPL v3.
+
+- **AGPL v3 Overview:**
+  - The software can be freely used, modified, and distributed.
+  - Any modified versions must also be distributed under AGPL v3.
+  - If the software is used to provide a network service, the source code of the modified version must be made available to users of the service.
+
+You can read the full license terms in the [LICENSE-software](./LICENSE-software) file.
