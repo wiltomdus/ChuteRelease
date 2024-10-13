@@ -4,7 +4,7 @@ import math
 class MockBarometer:
     """Mock class to simulate the DPS310 sensor during a model rocket flight"""
 
-    def __init__(self, boost_duration=1, coast_duration=5, descent_velocity=100):
+    def __init__(self, boost_duration=1, coast_duration=10, descent_velocity=100):
         """
         :param boost_duration: Duration of the boost phase (seconds).
         :param coast_duration: Duration of the coast phase (seconds).
@@ -23,8 +23,8 @@ class MockBarometer:
     def simulate_flight(self):
         """Simulate the flight trajectory based on phases"""
         if self.current_time <= self.boost_duration:
-            # Boost phase (constant acceleration of 10Gs)
-            acceleration = 98.1  # 10 Gs
+            # Boost phase (constant acceleration of 5Gs)
+            acceleration = 49.05  # 5 Gs in m/s^2
             self.vertical_velocity += (
                 acceleration * 0.1
             )  # Increment velocity every 0.1 second
@@ -96,12 +96,16 @@ class MockBarometer:
 
     def get_sensor_data(self) -> tuple[float, float, float]:
         """Get current simulated sensor data"""
+        print(f"current time :{self.current_time}")
+        if self.current_time < 0.1:
+            self.current_time += 0.01  # Simulate a time step (e.g., 10ms per reading)
+            return self.ground_pressure, 0, self.ground_temperature
         self.simulate_flight()
         pressure = self.simulate_pressure(self.altitude)
         temperature = self.simulate_temperature(self.altitude)
 
         # Increment time for the next reading
-        self.current_time += 0.1  # Simulate a time step (e.g., 100ms per reading)
+        self.current_time += 0.01  # Simulate a time step (e.g., 10ms per reading)
 
         return pressure, self.altitude, temperature
 
