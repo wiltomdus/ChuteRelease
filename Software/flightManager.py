@@ -7,6 +7,7 @@ import board
 import digitalio
 import pwmio
 from adafruit_motor import servo
+import ulab.numpy as np
 
 from mock_barometer import MockBarometer
 from barometer import Barometer
@@ -59,6 +60,7 @@ class FlightManager:
         """Set up the barometer depending on development or production mode."""
         if self.is_development:
             self.barometer = MockBarometer()
+            # self.barometer = Barometer()
             print("Using mock barometer for development")
         else:
             self.barometer = Barometer()
@@ -67,7 +69,7 @@ class FlightManager:
     def setup_servo(self):
         """Set up the servo motor, with error handling."""
         try:
-            pwm = pwmio.PWMOut(board.GP15, frequency=50)
+            pwm = pwmio.PWMOut(board.SERVO, frequency=50)
             servo_range = 120
             self.my_servo = servo.Servo(
                 pwm, min_pulse=900, max_pulse=2100, actuation_range=servo_range
@@ -79,10 +81,10 @@ class FlightManager:
     def setup_rotary_switch(self):
         """Set up the rotary switch pins."""
         self.pins = {
-            "pin0": digitalio.DigitalInOut(board.GP21),
-            "pin1": digitalio.DigitalInOut(board.GP20),
-            "pin2": digitalio.DigitalInOut(board.GP19),
-            "pin3": digitalio.DigitalInOut(board.GP18),
+            "pin0": digitalio.DigitalInOut(board.HEX_SW_1),
+            "pin1": digitalio.DigitalInOut(board.HEX_SW_2),
+            "pin2": digitalio.DigitalInOut(board.HEX_SW_4),
+            "pin3": digitalio.DigitalInOut(board.HEX_SW_8),
         }
 
         for pin in self.pins.values():
@@ -126,13 +128,15 @@ class FlightManager:
 
     async def main(self) -> None:
         self.ground_altitude = await self.collect_ground_altitude()
+        print(f"Ground altitude: {self.ground_altitude:.2f} m")
         self.open_flight_data_file()
 
         previous_time = time.monotonic()
-        previous_smoothed_altitude = self.ground_altitude
-        smoothed_altitude = self.ground_altitude
+        previous_smoothed_altitude_agl = self.ground_altitude
+        smoothed_altitude_agl = self.ground_altitude
 
         while True:
+
             current_time = time.monotonic()
             pressure, altitude, temperature = self.barometer.get_sensor_data()
             altitude_agl = altitude - self.ground_altitude
@@ -142,19 +146,23 @@ class FlightManager:
             self.kalman_filter.predict(delta_time)
             self.kalman_filter.update([altitude_agl], delta_time)
 
-            smoothed_altitude, self.vertical_velocity, self.vertical_acceleration = (
-                self.kalman_filter.get_state()
-            )
+            (
+                smoothed_altitude_agl,
+                self.vertical_velocity,
+                self.vertical_acceleration,
+            ) = self.kalman_filter.get_state()
 
             self.speed_of_sound = self.calculate_speed_of_sound(temperature)
 
             # TODO: Implement mach lockout
 
             # End the loop if the flight has landed
-            if self.update_flight_stage(smoothed_altitude, previous_smoothed_altitude):
+            if self.update_flight_stage(
+                smoothed_altitude_agl, previous_smoothed_altitude_agl
+            ):
                 break
 
-            previous_smoothed_altitude = smoothed_altitude
+            previous_smoothed_altitude_agl = smoothed_altitude_agl
 
             # Log the flight data to a file or print it
             if not self.is_development:
@@ -165,7 +173,7 @@ class FlightManager:
                 if file_size <= 12000000 and self.is_flight_started:
                     self.log_flight_data(
                         altitude_agl,
-                        smoothed_altitude,
+                        smoothed_altitude_agl,
                         pressure,
                         temperature,
                         self.vertical_velocity,
@@ -175,25 +183,38 @@ class FlightManager:
                     )
             else:
                 print(
-                    f"{time.monotonic()},{altitude_agl:.2f},{smoothed_altitude:.2f},{pressure:.2f},{temperature:.2f},{self.vertical_velocity:.2f},{self.vertical_acceleration:.2f},{self.flight_stage},{delta_time:.2f}"
+                    f"{time.monotonic()},{altitude_agl:.2f},{smoothed_altitude_agl:.2f},{pressure:.2f},{temperature:.2f},{self.vertical_velocity:.2f},{self.vertical_acceleration:.2f},{self.flight_stage},{delta_time:.2f}"
                 )
 
-            self.update_max_altitude(smoothed_altitude)
+            self.update_max_altitude(smoothed_altitude_agl)
 
             previous_time = current_time
 
-            await asyncio.sleep(0.1)  # TODO Remove when ready to run on hardware
-
     async def collect_ground_altitude(self) -> float:
-        """Collect ground altitude by averaging 10 samples over 5 seconds."""
+        """Collect ground altitude by averaging 10 samples over 5 seconds, excluding outliers."""
+
+        await asyncio.sleep(2)  # Wait for 2 second before collecting samples
+
         samples = []
         for _ in range(10):
             # Collect a single altitude sample
             samples.append(self.barometer.get_sensor_data()[1])
+            print(f"Ground Altitude: {samples[-1]}")
             # Wait for 0.5 seconds before collecting the next sample
             await asyncio.sleep(0.5)
-        # Calculate the average of the collected samples
-        return sum(samples) / len(samples)
+
+        # Convert samples to a ulab numpy array
+        samples_array = np.array(samples)
+
+        # Calculate mean and standard deviation
+        mean = np.mean(samples_array)
+        stdev = np.std(samples_array)
+
+        # Remove outliers that are more than 2 standard deviations away from the mean
+        filtered_samples = [x for x in samples if abs(x - mean) <= 2 * stdev]
+
+        # Calculate the average of the filtered samples
+        return sum(filtered_samples) / len(filtered_samples)
 
     def open_flight_data_file(self):
         """Open the flight data file for logging, if in production mode."""
