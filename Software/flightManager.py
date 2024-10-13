@@ -15,6 +15,8 @@ from barometer import Barometer
 # from kalman_filter import KalmanFilter
 from extended_kalman_filter import ExtendedKalmanFilter
 
+from neopixel_manager import NeoPixelManager
+
 FLIGHT_STAGES = ("LAUNCHPAD", "ASCENT", "APOGEE", "DESCENT", "LANDED")
 RELEASE_ALTITUDE = {
     "0": 30.48,  # 100 feet
@@ -55,6 +57,8 @@ class FlightManager:
         self.setup_rotary_switch()
 
         self.initialize_flight_variables()
+
+        self.neopixel_manager = NeoPixelManager()
 
     def setup_barometer(self):
         """Set up the barometer depending on development or production mode."""
@@ -190,6 +194,11 @@ class FlightManager:
 
             previous_time = current_time
 
+        print("End of flight")
+        while True:
+            # Display max altitude using NeoPixel
+            self.neopixel_manager.display_altitude_sequence(int(self.max_altitude))
+
     async def collect_ground_altitude(self) -> float:
         """Collect ground altitude by averaging 10 samples over 5 seconds, excluding outliers."""
 
@@ -239,6 +248,7 @@ class FlightManager:
         if self.flight_stage == FLIGHT_STAGES[0]:  # LAUNCHPAD
             self.handle_launchpad_stage(smoothed_altitude)
         elif self.flight_stage == FLIGHT_STAGES[1]:  # ASCENT
+            self.neopixel_manager.turn_off()
             if smoothed_altitude < previous_smoothed_altitude:  #! Apogee detected
                 self.flight_stage = FLIGHT_STAGES[2]  # * SET APOGEE
                 self.release_enabled = True

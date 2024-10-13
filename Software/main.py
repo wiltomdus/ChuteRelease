@@ -7,6 +7,8 @@ from flightManager import FlightManager
 import board
 import digitalio
 
+from neopixel_manager import NeoPixelManager
+
 
 def get_next_flight_number():
     """Retrieve and increment the flight number from a file."""
@@ -38,9 +40,6 @@ def generate_filename():
 async def main():
     is_development = False
 
-    led = digitalio.DigitalInOut(board.GP25)
-    led.direction = digitalio.Direction.OUTPUT
-
     flight_data_filename = generate_filename()
 
     # Check if filesystem is writable
@@ -53,7 +52,6 @@ async def main():
     finally:
         if is_development:
             print("Running in dev mode")
-            led.value = True
         else:
             print("Running in prod mode")
 
@@ -63,20 +61,15 @@ async def main():
 
     # Start the flight manager task
     print("Run flight manager task...")
-    flight_manager_task = asyncio.create_task(flight_manager.fly())
+    flight_manager_task = asyncio.create_task(flight_manager.main())
 
     await flight_manager_task
-
-    print("End of flight")
 
 
 if __name__ == "__main__":
 
-    BAT_SENSE = analogio.AnalogIn(board.BAT_SENSE)
+    BAT_SENSE = analogio.AnalogIn(board.VBAT_SENSE)
     BAT_SENSE_value = BAT_SENSE.value
-
-    # Print the ADC value
-    print(f"BAT_SENSE value: {BAT_SENSE_value}")
 
     conversion_factor = 3 * 3.3 / 65535
     full_battery = 4.2  # reference voltages for a full/empty battery, in volts
@@ -87,6 +80,12 @@ if __name__ == "__main__":
     percentage = 100 * ((voltage - empty_battery) / (full_battery - empty_battery))
     if percentage > 100:
         percentage = 100
+
+    # Initialize NeoPixelManager
+    neopixel_manager = NeoPixelManager()
+
+    # Display the battery percentage using NeoPixelManager
+    neopixel_manager.display_battery_level(percentage)
 
     print(f"Battery voltage: {voltage:0.2f}V ({percentage:0.1f}%)")
 
