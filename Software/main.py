@@ -84,8 +84,7 @@ if __name__ == "__main__":
     # Initialize NeoPixelManager
     neopixel_manager = NeoPixelManager()
 
-    # Display the battery percentage using NeoPixelManager
-    neopixel_manager.display_battery_level(percentage)
+    asyncio.create_task(neopixel_manager.display_battery_level(percentage))
 
     print(f"Battery voltage: {voltage:0.2f}V ({percentage:0.1f}%)")
 

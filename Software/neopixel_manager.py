@@ -1,6 +1,7 @@
-import time
 import neopixel
 import board
+import time
+import asyncio
 
 # Define the pin where the NeoPixel is connected and the number of pixels (1 in this case)
 NEOPIXEL_PIN = board.NEOPIX  # Example pin, adjust to your hardware
@@ -34,9 +35,10 @@ class NeoPixelManager:
         self.pixel.fill((0, 0, 0))  # Turn off initially
         self._initialized = True
 
-    def display_battery_level(self, percentage):
+    async def display_battery_level(self, percentage):
         """
         Display battery level on NeoPixel from green (full) to yellow (half) to red (low).
+        After 5 seconds of full lit, start blinking the battery level.
         :param percentage: Battery percentage (0 to 100)
         """
         if percentage > 50:
@@ -56,7 +58,9 @@ class NeoPixelManager:
                 0,  # Yellow to Red
             )
 
+        # Full lit for 5 seconds
         self.pixel.fill(color)
+        await asyncio.sleep(5)
 
     def turn_off(self):
         """Turn off the NeoPixel."""
@@ -90,3 +94,16 @@ class NeoPixelManager:
 
             # Short delay between digits
             time.sleep(1)
+
+    async def indicate_ready_state(self):
+        """
+        Blink three short blinks of green to indicate ready state.
+        This will continue until the task is stopped.
+        """
+        while True:
+            for _ in range(3):
+                self.pixel.fill((0, 255, 0))  # Green color
+                await asyncio.sleep(0.05)
+                self.pixel.fill((0, 0, 0))
+                await asyncio.sleep(0.05)
+            await asyncio.sleep(1)
