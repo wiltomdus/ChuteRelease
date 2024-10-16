@@ -16,6 +16,8 @@ from barometer import Barometer
 from extended_kalman_filter import ExtendedKalmanFilter
 
 from neopixel_manager import NeoPixelManager
+from flight_logger import FlightLogger
+from flight_data import FlightData
 
 FLIGHT_STAGES = ("LAUNCHPAD", "ASCENT", "APOGEE", "DESCENT", "LANDED")
 RELEASE_ALTITUDE = {
@@ -36,9 +38,10 @@ RELEASE_ALTITUDE = {
     "14": 457.2,  # 1500 feet
     "15": 487.68,  # 1600 feet
 }
-LAUNCH_DETECT_ALTITUDE = (
-    60.96  # Altitude threshold for launch detection in meters (200 ft)
-)
+ LAUNCH_DETECT_ALTITUDE = (
+     60.96  # Altitude threshold for launch detection in meters (200 ft)
+ )
+
 
 
 class FlightManager:
@@ -59,12 +62,13 @@ class FlightManager:
         self.initialize_flight_variables()
 
         self.neopixel_manager = NeoPixelManager()
+        self.flight_logger = FlightLogger(self.is_development)
 
     def setup_barometer(self):
         """Set up the barometer depending on development or production mode."""
         if self.is_development:
             self.barometer = MockBarometer()
-            # self.barometer = Barometer()
+            #self.barometer = Barometer()
             print("Using mock barometer for development")
         else:
             self.barometer = Barometer()
@@ -109,42 +113,34 @@ class FlightManager:
         self.is_flight_started = False
 
         self.vertical_velocity = 0.0
-        self.vertical_acceleration = 0.0
-        self.speed_of_sound = 343.0  # Speed of sound in air at 20°C (m/s)
-
-        # Initial state [altitude, velocity, acceleration]
-        initial_state = [0, 0, 0]  # Assume the rocket starts at 0 meters, stationary
-
-        # Process covariance matrix (Q): Represents uncertainty in the model
-        process_covariance = [
-            [1, 0, 0],  # Process noise for position
-            [0, 1, 0],  # Process noise for velocity
-            [0, 0, 1],  # Process noise for acceleration
-        ]
-
-        # Measurement variances for altitude
-        measurement_variances = [0.5]
+        self.speed_of_sound_threshold = 275.0  # Speed of sound in air at 20°C (m/s)
 
         # Initialize the filter
-        self.kalman_filter = ExtendedKalmanFilter(
-            initial_state, process_covariance, measurement_variances
-        )
+        self.kalman_filter = ExtendedKalmanFilter()
 
     async def main(self) -> None:
         self.ground_altitude = await self.collect_ground_altitude()
-        print(f"Ground altitude: {self.ground_altitude:.2f} m")
-        self.open_flight_data_file()
+        if self.is_flight_started:
+            self.flight_logger.store_data(
+                self.flight_data_filename,
+                f"ground altitude: {self.ground_altitude:.2f} m",
+            )
 
         previous_time = time.monotonic()
+        flight_time = 0.0
         previous_smoothed_altitude_agl = self.ground_altitude
         smoothed_altitude_agl = self.ground_altitude
 
         while True:
 
             current_time = time.monotonic()
+            flight_time += current_time - previous_time if self.is_flight_started else 0
             pressure, altitude, temperature = self.barometer.get_sensor_data()
             altitude_agl = altitude - self.ground_altitude
-            delta_time = current_time - previous_time
+            if self.is_development:
+                delta_time = 0.01
+            else:
+                delta_time = current_time - previous_time
 
             # Update Kalman filter with new altitude measurement
             self.kalman_filter.predict(delta_time)
@@ -153,42 +149,37 @@ class FlightManager:
             (
                 smoothed_altitude_agl,
                 self.vertical_velocity,
-                self.vertical_acceleration,
             ) = self.kalman_filter.get_state()
 
-            self.speed_of_sound = self.calculate_speed_of_sound(temperature)
+            self.speed_of_sound_threshold = (
+                round(self.calculate_speed_of_sound(temperature), 2) * 0.8
+            )
+            if self.is_flight_started:
+                self.flight_logger.store_data(
+                    self.flight_data_filename,
+                    f"speed of sound threshold (80% of mach speed): {self.speed_of_sound_threshold} m/s",
+                )
 
-            # TODO: Implement mach lockout
-
-            # End the loop if the flight has landed
             if self.update_flight_stage(
                 smoothed_altitude_agl, previous_smoothed_altitude_agl
             ):
-                break
+                break  # End the loop if the flight has landed
 
             previous_smoothed_altitude_agl = smoothed_altitude_agl
 
+            flight_data = FlightData(
+                flight_time,
+                altitude_agl,
+                smoothed_altitude_agl,
+                pressure,
+                temperature,
+                self.vertical_velocity,
+                self.flight_stage,
+                delta_time,
+            )
             # Log the flight data to a file or print it
-            if not self.is_development:
-                stat_result = os.stat(self.flight_data_filename)
-                file_size = stat_result[6]
-
-                # Log the flight data if the file size is less than 12MB and the flight has started
-                if file_size <= 12000000 and self.is_flight_started:
-                    self.log_flight_data(
-                        altitude_agl,
-                        smoothed_altitude_agl,
-                        pressure,
-                        temperature,
-                        self.vertical_velocity,
-                        self.vertical_acceleration,
-                        self.flight_stage,
-                        delta_time,
-                    )
-            else:
-                print(
-                    f"{time.monotonic()},{altitude_agl:.2f},{smoothed_altitude_agl:.2f},{pressure:.2f},{temperature:.2f},{self.vertical_velocity:.2f},{self.vertical_acceleration:.2f},{self.flight_stage},{delta_time:.2f}"
-                )
+            # if self.is_flight_started:
+            self.flight_logger.store_flight_data(self.flight_data_filename, flight_data)
 
             self.update_max_altitude(smoothed_altitude_agl)
 
@@ -197,7 +188,9 @@ class FlightManager:
         print("End of flight")
         while True:
             # Display max altitude using NeoPixel
-            self.neopixel_manager.display_altitude_sequence(int(self.max_altitude))
+            await self.neopixel_manager.display_altitude_sequence(
+                int(self.max_altitude)
+            )
 
     async def collect_ground_altitude(self) -> float:
         """Collect ground altitude by averaging 10 samples over 5 seconds, excluding outliers."""
@@ -214,6 +207,11 @@ class FlightManager:
 
         # Convert samples to a ulab numpy array
         samples_array = np.array(samples)
+        if self.is_flight_started:
+            self.flight_logger.store_data(
+                self.flight_data_filename,
+                f"ground altitude samples: {str(samples_array)}",
+            )
 
         # Calculate mean and standard deviation
         mean = np.mean(samples_array)
@@ -221,30 +219,17 @@ class FlightManager:
 
         # Remove outliers that are more than 2 standard deviations away from the mean
         filtered_samples = [x for x in samples if abs(x - mean) <= 2 * stdev]
+        if self.is_flight_started:
+            self.flight_logger.store_data(
+                self.flight_data_filename,
+                f"ground altitude samples without outliers: {str(filtered_samples)}",
+            )
 
         # Calculate the average of the filtered samples
         return sum(filtered_samples) / len(filtered_samples)
 
-    def open_flight_data_file(self):
-        """Open the flight data file for logging, if in production mode."""
-        if not self.is_development:
-            try:
-                with open(self.flight_data_filename, "w") as file:
-                    file.write(
-                        "Timestamp,Altitude AGL,Altitude Smoothed,Pressure,Temperature,Vertical Velocity,Vertical Acceleration,FlightStage, Delta Time\n"
-                    )
-                print(
-                    f"Opened flight data file: {self.flight_data_filename} for logging"
-                )
-            except OSError as err:
-                print("Unable to open flight data file:", err)
-                print("Switching to development mode...")
-                self.is_development = True
-        else:
-            print("Running in development mode, skipping file logging")
-
     def update_flight_stage(self, smoothed_altitude, previous_smoothed_altitude):
-        """Update the flight stage based on altitude and velocity."""
+        """Update the flight stage based on altitude"""
         if self.flight_stage == FLIGHT_STAGES[0]:  # LAUNCHPAD
             self.handle_launchpad_stage(smoothed_altitude)
         elif self.flight_stage == FLIGHT_STAGES[1]:  # ASCENT
@@ -259,7 +244,10 @@ class FlightManager:
             self.handle_descent_stage(smoothed_altitude)
         elif self.flight_stage == FLIGHT_STAGES[4]:  # LANDED
             print("Rocket has landed")
-            print(f"Max altitude: {self.max_altitude:.2f} m")
+            self.flight_logger.store_data(
+                self.flight_data_filename,
+                f"Max altitude: {self.max_altitude:.2f} m     ",
+            )
             return True
         return False
 
@@ -272,6 +260,7 @@ class FlightManager:
             self.flight_stage = FLIGHT_STAGES[1]  # * SET ASCENT
             self.is_flight_started = True
             print(f"Release altitude locked: {self.selected_release_altitude} meters")
+            self.flight_logger.store_data(self.flight_data_filename, "Flight started")
 
     def handle_descent_stage(self, smoothed_altitude):
         """Handle the descent stage and trigger parachute release if needed."""
@@ -312,33 +301,13 @@ class FlightManager:
         """Update the maximum altitude reached during the flight"""
         self.max_altitude = max(self.max_altitude, altitude)
 
-    def log_flight_data(
-        self,
-        altitude_agl,
-        smoothed_altitude,
-        pressure,
-        temperature,
-        vertical_velocity,
-        vertical_acceleration,
-        flight_stage,
-        delta_time,
-    ):
-        try:
-            # Log the flight data to a file
-            with open(self.flight_data_filename, "a") as file:
-                file.write(
-                    f"{time.monotonic()},{altitude_agl:.2f},{smoothed_altitude:.2f},{pressure:.2f},{temperature:.2f},{vertical_velocity:.2f},{vertical_acceleration:.2f},{flight_stage},{delta_time:.2f}\n"
-                )
-        except OSError:  # Typically when the filesystem isn't writable...
-            print("Filesystem not writable, skipping flight data logging")
-        except Exception as e:
-            print(f"Error writing to filesystem: {e}")
-            raise e
-
     def trigger_chute_release(self):
         """Trigger the parachute release mechanism"""
         print("Triggering parachute release...")
         self.my_servo.angle = 45
+        self.flight_logger.store_data(
+            self.flight_data_filename, "Triggered parachute release"
+        )
 
     def read_rotary_switch(self):
         """Reads the rotary switch and returns the corresponding altitude"""
