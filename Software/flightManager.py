@@ -38,21 +38,15 @@ RELEASE_ALTITUDE = {
     "14": 457.2,  # 1500 feet
     "15": 487.68,  # 1600 feet
 }
- LAUNCH_DETECT_ALTITUDE = (
-     60.96  # Altitude threshold for launch detection in meters (200 ft)
- )
-
+LAUNCH_DETECT_ALTITUDE = (
+    60.96  # Altitude threshold for launch detection in meters (200 ft)
+)
 
 
 class FlightManager:
     """The flight manager uses data from the altimeter and accelerometer to determine the flight stage"""
 
-    def __init__(
-        self, flight_data_filename: str = None, is_development: bool = None
-    ) -> None:
-        self.flight_data_filename = (
-            flight_data_filename if flight_data_filename else None
-        )
+    def __init__(self, is_development: bool = None) -> None:
         self.is_development = is_development if is_development is not None else True
 
         self.setup_barometer()
@@ -68,8 +62,9 @@ class FlightManager:
         """Set up the barometer depending on development or production mode."""
         if self.is_development:
             self.barometer = MockBarometer()
-            #self.barometer = Barometer()
+            # self.barometer = Barometer() # Uncomment this line to use the real barometer in development
             print("Using mock barometer for development")
+
         else:
             self.barometer = Barometer()
             print("Using real barometer for production")
@@ -120,11 +115,11 @@ class FlightManager:
 
     async def main(self) -> None:
         self.ground_altitude = await self.collect_ground_altitude()
-        if self.is_flight_started:
-            self.flight_logger.store_data(
-                self.flight_data_filename,
-                f"ground altitude: {self.ground_altitude:.2f} m",
-            )
+
+        # Start the indicate_ready_state task
+        self.indicate_ready_task = asyncio.create_task(
+            self.neopixel_manager.indicate_ready_state()
+        )
 
         previous_time = time.monotonic()
         flight_time = 0.0
@@ -154,13 +149,8 @@ class FlightManager:
             self.speed_of_sound_threshold = (
                 round(self.calculate_speed_of_sound(temperature), 2) * 0.8
             )
-            if self.is_flight_started:
-                self.flight_logger.store_data(
-                    self.flight_data_filename,
-                    f"speed of sound threshold (80% of mach speed): {self.speed_of_sound_threshold} m/s",
-                )
 
-            if self.update_flight_stage(
+            if await self.update_flight_stage(
                 smoothed_altitude_agl, previous_smoothed_altitude_agl
             ):
                 break  # End the loop if the flight has landed
@@ -179,18 +169,19 @@ class FlightManager:
             )
             # Log the flight data to a file or print it
             # if self.is_flight_started:
-            self.flight_logger.store_flight_data(self.flight_data_filename, flight_data)
+            self.flight_logger.store_flight_data(flight_data)
 
             self.update_max_altitude(smoothed_altitude_agl)
 
             previous_time = current_time
 
+            # Allow other tasks to run
+            await asyncio.sleep(0)
+
         print("End of flight")
         while True:
             # Display max altitude using NeoPixel
-            await self.neopixel_manager.display_altitude_sequence(
-                int(self.max_altitude)
-            )
+            self.neopixel_manager.display_altitude_sequence(int(self.max_altitude))
 
     async def collect_ground_altitude(self) -> float:
         """Collect ground altitude by averaging 10 samples over 5 seconds, excluding outliers."""
@@ -207,11 +198,6 @@ class FlightManager:
 
         # Convert samples to a ulab numpy array
         samples_array = np.array(samples)
-        if self.is_flight_started:
-            self.flight_logger.store_data(
-                self.flight_data_filename,
-                f"ground altitude samples: {str(samples_array)}",
-            )
 
         # Calculate mean and standard deviation
         mean = np.mean(samples_array)
@@ -219,21 +205,19 @@ class FlightManager:
 
         # Remove outliers that are more than 2 standard deviations away from the mean
         filtered_samples = [x for x in samples if abs(x - mean) <= 2 * stdev]
-        if self.is_flight_started:
-            self.flight_logger.store_data(
-                self.flight_data_filename,
-                f"ground altitude samples without outliers: {str(filtered_samples)}",
-            )
 
         # Calculate the average of the filtered samples
         return sum(filtered_samples) / len(filtered_samples)
 
-    def update_flight_stage(self, smoothed_altitude, previous_smoothed_altitude):
+    async def update_flight_stage(self, smoothed_altitude, previous_smoothed_altitude):
         """Update the flight stage based on altitude"""
         if self.flight_stage == FLIGHT_STAGES[0]:  # LAUNCHPAD
             self.handle_launchpad_stage(smoothed_altitude)
         elif self.flight_stage == FLIGHT_STAGES[1]:  # ASCENT
+            self.indicate_ready_task.cancel()
+            await self.indicate_ready_task
             self.neopixel_manager.turn_off()
+            self.flight_logger.start_logging()
             if smoothed_altitude < previous_smoothed_altitude:  #! Apogee detected
                 self.flight_stage = FLIGHT_STAGES[2]  # * SET APOGEE
                 self.release_enabled = True
@@ -244,10 +228,7 @@ class FlightManager:
             self.handle_descent_stage(smoothed_altitude)
         elif self.flight_stage == FLIGHT_STAGES[4]:  # LANDED
             print("Rocket has landed")
-            self.flight_logger.store_data(
-                self.flight_data_filename,
-                f"Max altitude: {self.max_altitude:.2f} m     ",
-            )
+            self.flight_logger.stop_logging()
             return True
         return False
 
@@ -260,7 +241,6 @@ class FlightManager:
             self.flight_stage = FLIGHT_STAGES[1]  # * SET ASCENT
             self.is_flight_started = True
             print(f"Release altitude locked: {self.selected_release_altitude} meters")
-            self.flight_logger.store_data(self.flight_data_filename, "Flight started")
 
     def handle_descent_stage(self, smoothed_altitude):
         """Handle the descent stage and trigger parachute release if needed."""
@@ -305,9 +285,6 @@ class FlightManager:
         """Trigger the parachute release mechanism"""
         print("Triggering parachute release...")
         self.my_servo.angle = 45
-        self.flight_logger.store_data(
-            self.flight_data_filename, "Triggered parachute release"
-        )
 
     def read_rotary_switch(self):
         """Reads the rotary switch and returns the corresponding altitude"""
