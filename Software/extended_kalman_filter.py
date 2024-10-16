@@ -2,18 +2,17 @@ import ulab.numpy as np  # Import ulab numpy-like functionality
 
 
 class ExtendedKalmanFilter:
-    def __init__(self, initial_state, process_covariance, measurement_covariance):
+    def __init__(self):
         """
         Initialize the EKF with the initial state, process covariance, and measurement covariance.
 
-        :param initial_state: List of floats [altitude, velocity, acceleration].
+        :param initial_state: List of floats [altitude, velocity].
         :param process_covariance: 2D list representing the process covariance matrix (Q).
         :param measurement_covariance: List representing the measurement covariance matrix (R).
         """
-        self.state = np.array(initial_state)
+        self.state = np.array([0, 0])  # Initial state: [altitude, velocity]
 
-        self.process_covariance = np.array(process_covariance)
-        self.measurement_covariance = np.array(measurement_covariance)
+        self.process_covariance = np.array([[1, 0], [0, 1]])
 
         # Error covariance matrix (P): Initial uncertainty in state estimates (identity matrix)
         self.error_covariance = np.eye(len(self.state))
@@ -36,19 +35,27 @@ class ExtendedKalmanFilter:
             np.dot(F, np.dot(self.error_covariance, F.T)) + self.process_covariance
         )
 
-    def update(self, measurement, dt):
+    def update(self, measurement, dt, speed_of_sound_threshold=274.4):
         """
         Update step: Incorporate the new measurement into the state estimate.
-        Better handle velocity and acceleration as derived from altitude.
 
         :param measurement: The altitude measurement.
         :param dt: Time step as a float (seconds).
         """
         if dt == 0:
             self.state[1] = 0  # Set velocity to 0
-            self.state[2] = 0  # Set acceleration to 0
             self.previous_altitude = self.state[0]
             return
+
+        # Calculate velocity to detect supersonic flight (rough threshold)
+        if abs(self.state[1]) > speed_of_sound_threshold:
+            # Increase measurement covariance (less trust in measurements)
+            self.measurement_covariance = np.array([[5.0]])
+            print("Supersonic flight detected!")
+        else:
+            # Reset measurement covariance (normal mode)
+            self.measurement_covariance = np.array([[0.5]])
+            print("Normal flight mode.")
 
         predicted_measurement = self.measurement_function(self.state)
         residual = np.array(measurement) - predicted_measurement
@@ -73,14 +80,13 @@ class ExtendedKalmanFilter:
         altitude = self.state[0]
 
         self.state[1] = (altitude - self.previous_altitude) / dt
-        self.state[2] = (self.state[1] - self.previous_velocity) / dt
 
         self.previous_altitude = altitude
         self.previous_velocity = self.state[1]
 
     def get_state(self):
         """
-        Return the current state estimate: List of floats [altitude, velocity, acceleration].
+        Return the current state estimate: List of floats [altitude, velocity].
         """
         return self.state
 
@@ -88,23 +94,20 @@ class ExtendedKalmanFilter:
     def state_transition_function(state, dt):
         """
         Predict the next state based on the current state and time step (dt).
-        Assuming a simple model where altitude depends on velocity, and velocity depends on acceleration.
-
-        :param state: List of floats representing the current state [altitude, velocity, acceleration].
+        Altitude is updated based on velocity, and velocity remains constant.
+        :param state: List of floats representing the current state [altitude, velocity].
         :param dt: Time step as a float (seconds).
-        :return: List of floats representing the predicted next state [altitude, velocity, acceleration].
+        :return: List of floats representing the predicted next state [altitude, velocity].
         """
-        altitude, velocity, acceleration = state
-        next_altitude = altitude + velocity * dt + 0.5 * acceleration * dt**2
-        next_velocity = velocity + acceleration * dt
-        next_acceleration = acceleration  # Assuming constant acceleration
-        return np.array([next_altitude, next_velocity, next_acceleration])
+        altitude, velocity = state
+        next_altitude = altitude + velocity * dt
+        next_velocity = velocity  # Assuming no external forces change velocity
+        return np.array([next_altitude, next_velocity])
 
     @staticmethod
     def state_transition_jacobian(dt):
         """
         Jacobian matrix of the state transition function.
-
         :param dt: Time step as a float (seconds).
         :return: 2D list representing the Jacobian matrix of partial derivatives.
         """
@@ -113,10 +116,8 @@ class ExtendedKalmanFilter:
                 [
                     1,
                     dt,
-                    0.5 * dt**2,
                 ],  # Partial derivatives of altitude with respect to state variables
-                [0, 1, dt],  # Partial derivatives of velocity
-                [0, 0, 1],  # Partial derivatives of acceleration
+                [0, 1],  # Partial derivatives of velocity
             ]
         )
 
@@ -124,20 +125,16 @@ class ExtendedKalmanFilter:
     def measurement_function(state):
         """
         Predict the measurement (altitude) from the current state.
-
-        :param state: List of floats representing the current state [altitude, velocity, acceleration].
+        :param state: List of floats representing the current state [altitude, velocity].
         :return: List of floats representing the predicted measurement (altitude).
         """
-        altitude, velocity, acceleration = state
+        altitude, velocity = state
         return np.array([altitude])
 
     @staticmethod
     def measurement_jacobian():
         """
         Jacobian matrix of the measurement function.
-
         :return: 2D list representing the Jacobian matrix for the measurement function.
         """
-        return np.array(
-            [[1, 0, 0]]
-        )  # We only measure altitude, so the derivative is 1 with respect to altitude
+        return np.array([[1, 0]])  # We only measure altitude
